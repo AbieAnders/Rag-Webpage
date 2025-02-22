@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { OpenAI } from "openai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const dimension = 1536; // OpenAI embedding size (text-embedding-3-small)
-
 export async function POST(req: NextRequest) {
-    //async function getTextEmbedding(text: string): Promise<number[] | null> {
     try {
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        //const dimension = 1536; // OpenAI embedding size (text-embedding-3-small)
         const { text } = await req.json();
         if (!text) {
             return new Response(JSON.stringify({ error: "Empty text provided for embedding." }), { status: 404 });

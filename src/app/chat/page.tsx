@@ -106,7 +106,7 @@ export default function Chat() {
         if (data?.error) {
             setError(data.error); //Mainly for showing the error in the frontend.
         } else {
-            let relevantContext = data?.matches?.join("\n") || "No relevant data found.";
+            const relevantContext = data?.matches?.join("\n") || "No relevant data found.";
 
             const llmResponse = await fetchInternalAPI("chat", {
                 userMessage: currentMessage,
