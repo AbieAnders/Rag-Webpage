@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     //
     // Make sure to change the url for production
-    const embeddingResponse = await fetch(`${process.env.NEXT_PUBLIC_PROD_URL}/api/embed`, {
+    const embeddingResponse = await fetch(`${process.env.PROD_URL}/api/embed`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: userMessage }),
