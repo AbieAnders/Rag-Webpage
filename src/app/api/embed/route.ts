@@ -1,31 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { OpenAI } from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function POST(req: NextRequest) {
     try {
-        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-        //const dimension = 1536; // OpenAI embedding size (text-embedding-3-small)
+        const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+        if (!GEMINI_API_KEY) {
+            throw new Error("GEMINI_API_KEY is missing in environment variables");
+        }
+        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+        //const dimension = 768; // Gemini embedding output dimension size (text-embedding-004)
+        //const token_limit = 2048 // Gemini embedding input token limit (text-embedding-004)
         const { text } = await req.json();
         if (!text) {
-            return new Response(JSON.stringify({ error: "Empty text provided for embedding." }), { status: 404 });
-            //return NextResponse.json({ error: "Empty text provided for embedding." }, { status: 400 });
+            return new Response(JSON.stringify({ error: "Failed to get the text to be embedded" }), { status: 404 });
         }
-        console.log("Sending text to OpenAI:", text.slice(0, 100));
+        if (!text) {
+            throw new Error(`Empty text provided for embedding`);
+        }
 
-        const embedding = await openai.embeddings.create({
-            model: "text-embedding-3-small",
-            input: text,
-            encoding_format: "float",
-        });
+        const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
+        console.log("Sending text to Google Embeddings:", text.slice(0, 100));
 
-        console.log("OpenAI Response:", embedding);
-        return NextResponse.json({ embedding: embedding.data[0].embedding }, { status: 200 });
+        const result = await model.embedContent(text);
+        const embedding_values = result.embedding.values; // Extract the embedding array
+        //console.log("Google Embeddings Response:", embedding_values);
+        return NextResponse.json({ embedding_values }, { status: 200 });
     } catch (error: any) {
         //console.error("Error generating embeddings:", error.response?.data || error.message || error);
-        throw new Error(`Error generating embeddings:, ${error.response?.data || error.message || error}`);
-        /*return NextResponse.json(
-            { error: error.response?.data || error.message || "Internal server error" },
-            { status: 500 }
-        );*/
+        //throw new Error(`Error generating embeddings:, ${error.response?.data || error.message || error}`);
+        throw new Error(`Error generating embeddings: ${error.response?.data || error}`);
     }
 }
