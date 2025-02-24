@@ -5,7 +5,8 @@ Before running the app locally, make sure you have the following installed:
 2)Supabase account 
 3)Gemini API Key
 
-Run the following commands: 1)git clone https://github.com/AbieAnders/Rag-Webpage.git 
+Run the following commands: 
+1)git clone https://github.com/AbieAnders/Rag-Webpage.git 
 2)cd Rag-Webpage 
 3)npm install
 

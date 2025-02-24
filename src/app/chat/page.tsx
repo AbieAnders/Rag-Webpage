@@ -239,7 +239,7 @@ export default function Chat() {
                                     ref={inputRef}
                                     onChange={(e) => setUserMessage(e.target.value)}
                                     onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                                    placeholder="What did you find in the url?"
+                                    placeholder="What is in the <insert> url?"
                                     className="text-base p-3"
                                 />
                                 {uiSuccessMessage && <p className="text-green-500 text-sm">{uiSuccessMessage}</p>}
