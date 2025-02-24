@@ -93,7 +93,7 @@ export default function Chat() {
 
             const fullscrape = await fetchInternalAPI("fullscraper", "POST", { url: scrapeUrl });
             try {
-                console.log("Raw Fullscrape Response:", fullscrape);
+                //console.log("Raw Fullscrape Response:", fullscrape);
                 if (fullscrape?.error) {
                     setUiErrorMessage(fullscrape.error);
                 } else if (fullscrape?.content) {
@@ -197,6 +197,7 @@ export default function Chat() {
                                     id="user_url"
                                     value={scrapeUrl}
                                     onChange={(e) => setScrapeUrl(e.target.value)}
+                                    onKeyDown={(e) => e.key === "Enter" && handleSendUrl()}
                                     placeholder="https://www.google.com/robots.txt"
                                     //defaultValue="https://www.google.com/robots.txt"
                                     className="text-base p-3"
@@ -237,6 +238,7 @@ export default function Chat() {
                                     value={userMessage}
                                     ref={inputRef}
                                     onChange={(e) => setUserMessage(e.target.value)}
+                                    onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
                                     placeholder="What did you find in the url?"
                                     className="text-base p-3"
                                 />
@@ -254,18 +256,23 @@ export default function Chat() {
 
                 {/* Scraped Tab */}
                 <TabsContent value="scraped">
-                    <Card className="p-4 flex flex-col gap-4">
+                    <Card className="p-4 flex flex-col gap-4 w-full max-w-6xl h-[705px]">
                         <CardHeader>
                             <CardTitle>Scraped Content</CardTitle>
                             <CardDescription>
                                 Content that was just scraped from the url you pasted
                             </CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            <div className="h-64 lg:h-[400px] overflow-y-auto border border-gray-300 rounded p-2">
-                                <pre>{fullyScrapedContent || "Have not delivered this yet."}</pre>
+                        <CardContent className="flex-grow overflow-y-auto">
+                            <div className="flex-grow h-full overflow-y-auto p-4 border border-gray-300 rounded">
+                                <pre className="whitespace-pre-wrap">{fullyScrapedContent}</pre>
                             </div>
                         </CardContent>
+                        <CardFooter className="mt-auto flex justify-end">
+                            <Button onClick={() => setActiveTab("chat")} className="h-14 w-full md:w-1/3">
+                                Go to Chat
+                            </Button>
+                        </CardFooter>
                     </Card>
                 </TabsContent>
             </Tabs>

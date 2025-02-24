@@ -1,24 +1,62 @@
-import { chromium } from "playwright";
+import * as cheerio from 'cheerio'; // Cheerio library is exported using module.exports rather than export default
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-async function scrapeWebsite(url: string): Promise<string> {
-    const browser = await chromium.launch();
-    const page = await browser.newPage();
+async function scrapeWebsiteCheerio(url: string): Promise<string> {
     try {
-        await page.goto(url, { waitUntil: "domcontentloaded" });
-        const text = await page.evaluate(() => {
-            return Array.from(document.querySelectorAll("pre, p, h1, h2, h3, h4, h5, h6, div, span, a, li, article, section")) // pre is for the robots.txt page
-                .map(p => p.textContent?.trim())
-                .filter(Boolean)
-                .join(" ");
-        });
-        // Truncate text to 8192 characters (about 4000 words)
-        return text.slice(0, 8192);
+        // Checks whether the url exists and is accessible by directly fetching the HTMl.
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch the URL: ${url} with status: ${response.status}`);
+        }
+
+        // Specifically handles { content-type: text/plain } since playwright did it by default but cheerio doesn't
+        const contentType = response.headers.get("content-type") || "";
+        const isPlainText = contentType.includes("text/plain");
+        if (isPlainText) {
+            const fullPlainText = await response.text();
+            /*
+            const plainText = fullPlainText.slice(0, 8192);
+            if (!plainText || plainText.length < 10) {
+                throw new Error(`Scraped content is too short or empty for: ${url}`);
+            }
+            return plainText;
+            */
+            return fullPlainText;
+        }
+
+        // Specifically handles { content-type: text/html } since it's what cheerio handles by default
+        if (!contentType.includes("text/html")) {
+            throw new Error(`Unsupported content type: ${contentType}`);
+        }
+
+        const html = await response.text();
+        //console.log(html)
+        const $ = cheerio.load(html);  // $ is a naming convention for the cheerio object
+        const htmlBody = $('body')
+            .find('*:not(script):not(style):not(meta):not(link):not(head)')
+            .map((_index: any, element: any) => $(element).text().trim())  // index is unused, So prefixed it with _
+            .get() // Converts mapping result into an array
+            .join(' '); // Joins array into a single string
+
+        if (!htmlBody) {
+            throw new Error("CHEERIO FAILED");
+        }
+        /*
+        const truncatedHtml = htmlBody.slice(0, 8192);
+        if (truncatedHtml.length < 10) {
+            throw new Error("CHEERIO FAILED");
+            //throw new Error(`Scraped content is too short or empty for: ${url}`);
+        }
+        return truncatedHtml;
+        */
+        // Trying to keep Entire HTML Body for knowledge base
+        return htmlBody;
     } catch (error: any) {
-        throw new Error(`Scraping failed: ${error.response?.data || error.message || error}`);
-    } finally {
-        await browser.close();
+        if (error.message === "CHEERIO FAILED") {
+            throw new Error("Cheerio was unable to extract meaningful content. A headless browser like playwright may be required.");
+        }
+        throw new Error(`Scraping failed for URL: ${url} Error: ${error.response?.data || error.message || error}`);
     }
 }
 
@@ -37,19 +75,15 @@ async function storeInSupabase(url: string, text: string, embedding: number[], s
 export async function POST(req: NextRequest) {
     try {
         const supabaseUrl = process.env.SUPABASE_URL!;  // ! is the non-null assertion operator
-        const supabaseKey = process.env.SUPABASE_ANON_KEY!;
         const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; // Required for inserting into vector data columns
+
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
         const { url } = await req.json();
-        if (!url || typeof url !== "string" || !/^https?:\/\/[\w.-]+(?:\.[\w.-]+)+[/\w.-]*$/.test(url)) {
+        //console.log("Received URL:", url);
+        try {
+            new URL(url); // Ensures valid URL format
+        } catch {
             return new Response(JSON.stringify({ error: "Invalid URL format" }), { status: 400 });
-        }
-
-        // Checks whether the url exists and is accessible by fetching the header of the response.
-        const response = await fetch(url, { method: "HEAD" });
-        if (!response.ok) {
-            return new Response(JSON.stringify({ error: "URL is unreachable" }), { status: response.status });
         }
 
         // Scans the db for matches with the current url
@@ -61,23 +95,18 @@ export async function POST(req: NextRequest) {
 
         // Checks whether the supabase db exists and is accessible
         if (selectError && selectError.code !== "PGRST116") {
-            return new Response(JSON.stringify({ error: "Database Error" }), { status: 404 });
+            return new Response(JSON.stringify({ error: "Database Error" }), { status: 500 });
         }
 
-        // Switch tabs like usual when duplicate urls are entered(no db update, no error returned)
+        // Switch tabs like usual when entered url already exists in the db(no db update, no error returned)
         if (existingPage) {
             return NextResponse.json({ message: "URL already exists in the database", url });
         }
 
-        const scrapedText = await scrapeWebsite(url);
-        console.log("Scraped Text Length:", scrapedText.length);
-        // Already checking for errors in the function but double checking just in case.
-        if (!scrapedText || scrapedText.length < 10) {
-            return new Response(JSON.stringify({ error: "Scraped content is either too short or empty" }), { status: 404 });
-        }
+        const scrapedText = await scrapeWebsiteCheerio(url);
+        //console.log("Scraped Text Length:", scrapedText.length);
 
-        //
-        // Make sure to change the url for production
+        // Make sure to set the url in env of the production environment
         const embeddingResponse = await fetch(`${process.env.PROD_URL}/api/embed`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
