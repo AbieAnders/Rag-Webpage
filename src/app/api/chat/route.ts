@@ -13,8 +13,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 });
     }
 
-    //
-    // Make sure to change the url for production
+    // Truncate text to enforce the 10,000-byte limit(for Gemini API)
+    // Emojis may cause this to overflow
+    const truncatedText = userMessage.slice(0, 9000);
+
+    if (userMessage !== truncatedText) {
+      console.log("Some of the users message is being truncated for the Gemini APi")
+    }
+
+    // Make sure to set the url in env of the production environment
     const embeddingResponse = await fetch(`${process.env.PROD_URL}/api/embed`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

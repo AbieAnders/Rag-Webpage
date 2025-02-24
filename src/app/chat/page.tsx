@@ -42,6 +42,11 @@ export default function Chat() {
     const inputRef = useRef<HTMLInputElement>(null);
     const chatEndRef = useRef<null | HTMLDivElement>(null);
 
+    const maxChars = 9200;
+    const charCount = userMessage.length;
+    const isOverLimit = charCount > maxChars;
+    const warningColor = isOverLimit ? "text-red-500" : charCount > maxChars - 500 ? "text-yellow-500" : "text-gray-500";
+
     // Fetches all backend api's in a neat way
     // method can be hard coded to POST because its the only request being made right now.
     // payload is optional because of GET requests.
@@ -233,6 +238,12 @@ export default function Chat() {
                                 ))}
                             </div>
                             <div className="mt-4 space-y-4">
+                                {/* Character Counter & Warning */}
+                                <div className="flex justify-between items-center">
+                                    <span className={warningColor}>
+                                        {isOverLimit ? "⚠ Message will be truncated!" : `${charCount}/${maxChars}`}
+                                    </span>
+                                </div>
                                 <Input
                                     id="user_input"
                                     value={userMessage}

@@ -14,15 +14,15 @@ async function scrapeWebsiteCheerio(url: string): Promise<string> {
         const contentType = response.headers.get("content-type") || "";
         const isPlainText = contentType.includes("text/plain");
         if (isPlainText) {
-            const fullPlainText = await response.text();
+            const plainText = await response.text();
             /*
-            const plainText = fullPlainText.slice(0, 8192);
+            const plainText = plainText.slice(0, 8192);
             if (!plainText || plainText.length < 10) {
                 throw new Error(`Scraped content is too short or empty for: ${url}`);
             }
             return plainText;
             */
-            return fullPlainText;
+            return plainText;
         }
 
         // Specifically handles { content-type: text/html } since it's what cheerio handles by default
@@ -106,11 +106,19 @@ export async function POST(req: NextRequest) {
         const scrapedText = await scrapeWebsiteCheerio(url);
         //console.log("Scraped Text Length:", scrapedText.length);
 
+        // Truncate text to enforce the 10,000-byte limit(for Gemini API)
+        // Emojis may cause this to overflow
+        const truncatedText = scrapedText.slice(0, 9000);
+
+        if (scrapedText !== truncatedText) {
+            console.log("Some of the scraped text is being truncated for the Gemini APi")
+        }
+
         // Make sure to set the url in env of the production environment
         const embeddingResponse = await fetch(`${process.env.PROD_URL}/api/embed`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: scrapedText }),
+            body: JSON.stringify({ text: truncatedText }),
         });
         if (!embeddingResponse.ok) {
             return new Response(JSON.stringify({ error: "Failed to generate scraped contents embedding" }), { status: 404 });
@@ -137,7 +145,7 @@ export async function POST(req: NextRequest) {
     catch (error: any) {
         console.error("Scraping API Error:", error);
         return NextResponse.json({
-            error: error.message || "Internal server error",
+            error: error.message,
             stack: process.env.NODE_ENV === "development" ? error.stack : null,
         }, { status: 500 });
     }

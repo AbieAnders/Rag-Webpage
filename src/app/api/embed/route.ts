@@ -14,20 +14,15 @@ export async function POST(req: NextRequest) {
         if (!text) {
             return new Response(JSON.stringify({ error: "Failed to get the text to be embedded" }), { status: 404 });
         }
-        if (!text) {
-            throw new Error(`Empty text provided for embedding`);
-        }
 
         const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
-        console.log("Sending text to Google Embeddings:", text.slice(0, 100));
+        console.log("Sending text to Google Embeddings:", text.slice(0, 200));
 
         const result = await model.embedContent(text);
         const embedding_values = result.embedding.values; // Extract the embedding array
         //console.log("Google Embeddings Response:", embedding_values);
         return NextResponse.json({ embedding_values }, { status: 200 });
     } catch (error: any) {
-        //console.error("Error generating embeddings:", error.response?.data || error.message || error);
-        //throw new Error(`Error generating embeddings:, ${error.response?.data || error.message || error}`);
-        throw new Error(`Error generating embeddings: ${error.response?.data || error}`);
+        throw new Error(`Error generating embeddings:, ${error.response?.data || error.message || error}`);
     }
 }
