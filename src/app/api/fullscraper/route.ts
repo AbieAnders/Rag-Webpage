@@ -13,12 +13,15 @@ async function scrapeWebsiteCheerio(url: string): Promise<string> {
         const contentType = response.headers.get("content-type") || "";
         const isPlainText = contentType.includes("text/plain");
         if (isPlainText) {
-            const text = await response.text();
-            const plainText = text.slice(0, 8192);  // Can never return an undefined string
-            if (plainText.length < 10) {
+            const fullPlainText = await response.text();
+            /*
+            const plainText = fullPlainText.slice(0, 8192);
+            if (!plainText || plainText.length < 10) {
                 throw new Error(`Scraped content is too short or empty for: ${url}`);
             }
             return plainText;
+            */
+            return fullPlainText;
         }
 
         // Specifically handles { content-type: text/html } since it's what cheerio handles by default
