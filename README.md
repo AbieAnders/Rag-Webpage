@@ -1,36 +1,28 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is a Next.js app designed to work with Supabase and Gemini API, It uses PostgreSQL to store web pages and perform similairty searches using vector embeddings.
 
-## Getting Started
+Before running the app locally, make sure you have the following installed: 
+1)Node.js 
+2)Supabase account 
+3)Gemini API Key
 
-First, run the development server:
+Run the following commands: 1)git clone https://github.com/AbieAnders/Rag-Webpage.git 
+2)cd Rag-Webpage 
+3)npm install
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Environment variables: You will need a 
+1)SUPABASE_URL
+2)SUPABASE_SERVICE_ROLE_KEY
+3)PROD_URL=https://rag-two-mu.vercel.app
+4)GEMINI_API_KEY
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The first 2 can be obtained from a supabase project after running the following PostgreSQL commands in the SQL editor.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1)CREATE EXTENSION IF NOT EXISTS vector;
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2)CREATE TABLE webpages_1 ( id SERIAL PRIMARY KEY, url TEXT UNIQUE NOT NULL, content TEXT NOT NULL, embedding vector(768) --768 is the size of the output by the embeddings model-- );
 
-## Learn More
+3)CREATE OR REPLACE FUNCTION match_webpages( query_embedding vector(768), match_threshold float, match_count int ) RETURNS TABLE(id int, url text, content text, similarity float) AS $$ BEGIN RETURN QUERY SELECT w.id, w.url, w.content, 1 - (w.embedding <=> query_embedding) AS similarity FROM webpages_1 w WHERE (embedding <=> query_embedding) < match_threshold ORDER BY similarity DESC LIMIT match_count; END; $$ LANGUAGE plpgsql;
 
-To learn more about Next.js, take a look at the following resources:
+Run the following command: npm run dev
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Now youre running the app locally :)
